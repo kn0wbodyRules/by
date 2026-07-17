@@ -1,0 +1,9 @@
+{
+  "materials": [
+    {"material_name": "flooring_vitrified_tile", "unit": "sqft", "formula": "flooring"},
+    {"material_name": "wall_paint_emulsion", "unit": "sqft", "formula": "paint_plaster"},
+    {"material_name": "cement_plaster", "unit": "sqft", "formula": "paint_plaster"},
+    {"material_name": "brickwork", "unit": "cft", "formula": "brickwork_concrete"},
+    {"material_name": "concrete_rcc", "unit": "cft", "formula": "brickwork_concrete"}
+  ]
+}

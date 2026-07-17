@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: boq_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-boq_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-boq_password}
+      POSTGRES_DB: ${POSTGRES_DB:-boq_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - boq_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-boq_user} -d ${POSTGRES_DB:-boq_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  boq_pgdata:

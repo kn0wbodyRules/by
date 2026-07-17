@@ -1,0 +1,37 @@
+[
+  {
+    "material_name": "flooring_vitrified_tile",
+    "unit": "sqft",
+    "rate_per_unit": 85,
+    "location": "Tamil Nadu",
+    "source_label": "PLACEHOLDER - NOT REAL PWD SOR - replace before production use"
+  },
+  {
+    "material_name": "wall_paint_emulsion",
+    "unit": "sqft",
+    "rate_per_unit": 18,
+    "location": "Tamil Nadu",
+    "source_label": "PLACEHOLDER - NOT REAL PWD SOR - replace before production use"
+  },
+  {
+    "material_name": "cement_plaster",
+    "unit": "sqft",
+    "rate_per_unit": 45,
+    "location": "Tamil Nadu",
+    "source_label": "PLACEHOLDER - NOT REAL PWD SOR - replace before production use"
+  },
+  {
+    "material_name": "brickwork",
+    "unit": "cft",
+    "rate_per_unit": 95,
+    "location": "Tamil Nadu",
+    "source_label": "PLACEHOLDER - NOT REAL PWD SOR - replace before production use"
+  },
+  {
+    "material_name": "concrete_rcc",
+    "unit": "cft",
+    "rate_per_unit": 220,
+    "location": "Tamil Nadu",
+    "source_label": "PLACEHOLDER - NOT REAL PWD SOR - replace before production use"
+  }
+]
