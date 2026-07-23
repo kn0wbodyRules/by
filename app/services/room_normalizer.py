@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from app.models.enums import RoomSource, RoomType
 from app.models.room import Room
 from app.schemas.room import Dimensions, ManualRoomInput, RoomEdit, RoomOut
-from app.services.room_classifier import classify_room_type, compute_aspect_ratio
+from app.services.room_classifier import classify_room_type_escalated, compute_aspect_ratio
 
 
 class RoomCreate(BaseModel):
@@ -52,7 +52,7 @@ def _build_room_create(
 ) -> RoomCreate:
     area_sqft = length_ft * width_ft
     aspect_ratio = compute_aspect_ratio(length_ft, width_ft)
-    room_type = classify_room_type(
+    room_type = classify_room_type_escalated(
         room_name_raw,
         area_sqft=area_sqft,
         aspect_ratio=aspect_ratio,

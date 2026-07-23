@@ -34,6 +34,17 @@ class Settings(BaseSettings):
     GEMINI_MODEL: str = "gemini-2.0-flash"
     GEMINI_MOCK_MODE: bool = True
 
+    # Stage 2b — Gemini embedding room-type classifier (escalation layer).
+    GEMINI_EMBED_MODEL: str = "gemini-embedding-001"
+    ROOM_EMBED_DIM: int = 768
+    # Below this cosine similarity to the nearest reference phrase, the embedding
+    # guess is not trusted and the room stays OTHER — same "don't guess when unsure"
+    # gate as the correction-factor confidence logic. Calibrated against real
+    # gemini-embedding-001 output (tools/calibrate_room_embed.py): genuine creative
+    # room names scored >=0.887, non-rooms (garden, staircase, parking) <=0.865, so
+    # 0.88 cleanly separates them while defaulting the uncertain middle to OTHER.
+    ROOM_EMBED_MATCH_THRESHOLD: float = 0.88
+
     # App
     ENV: str = "development"
     UPLOAD_DIR: str = "./uploads"

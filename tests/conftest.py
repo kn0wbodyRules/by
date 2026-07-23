@@ -12,6 +12,11 @@ from app.models.rate_table import RateTable
 
 settings = get_settings()
 
+# Tests must never hit the Gemini API. Forcing mock mode makes the Stage 2b embedding
+# room-classifier escalation a no-op (returns None -> keyword result stands), so
+# classification stays deterministic and offline regardless of what .env has enabled.
+settings.GEMINI_MOCK_MODE = True
+
 _RATE_TABLE_SEED = json.loads(
     (Path(__file__).resolve().parents[1] / "app" / "seed_data" / "rate_table_seed.json").read_text()
 )

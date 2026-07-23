@@ -45,12 +45,43 @@ def classify_room_type(
     door_count: int | None = None,
     window_count: int | None = None,
 ) -> RoomType:
+    """Pure keyword baseline — deterministic, offline, no external calls. Returns OTHER
+    when nothing matches. The extra feature args are the unused seam described above."""
     text = room_name_raw or ""
     for room_type, keywords in ROOM_TYPE_KEYWORDS:
         for keyword in keywords:
             if _matches_keyword(text, keyword):
                 return room_type
     return RoomType.OTHER
+
+
+def classify_room_type_escalated(
+    room_name_raw: str,
+    area_sqft: float | None = None,
+    aspect_ratio: float | None = None,
+    door_count: int | None = None,
+    window_count: int | None = None,
+) -> RoomType:
+    """Stage 2b entry point used by the pipeline: keyword baseline first, then escalate
+    to the Gemini embedding classifier only for the ambiguous remainder the keywords
+    can't place (i.e. when the baseline returns OTHER). Falls back to OTHER if the
+    embedding layer is disabled (mock mode / no key) or not confident enough."""
+    keyword_result = classify_room_type(
+        room_name_raw,
+        area_sqft=area_sqft,
+        aspect_ratio=aspect_ratio,
+        door_count=door_count,
+        window_count=window_count,
+    )
+    if keyword_result is not RoomType.OTHER:
+        return keyword_result
+
+    # Lazy import keeps the pure keyword path free of the google-genai dependency and
+    # keeps this module unit-testable fully offline.
+    from app.services.room_classifier_embedding import classify_by_embedding
+
+    match = classify_by_embedding(room_name_raw)
+    return match[0] if match is not None else RoomType.OTHER
 
 
 def compute_aspect_ratio(length_ft: float, width_ft: float) -> float:
