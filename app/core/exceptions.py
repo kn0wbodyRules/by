@@ -30,3 +30,12 @@ class ConfigError(DomainError):
     in production) — fails loudly instead of silently no-op'ing."""
 
     status_code = 500
+
+
+class EmailDeliveryError(DomainError):
+    """Raised when SMTP is configured but the send itself fails (host unreachable,
+    auth rejected, port blocked). Distinct from ConfigError so callers can decide
+    whether a failed send should abort the request or just be reported — registration
+    treats it as non-fatal so the account isn't stranded."""
+
+    status_code = 502

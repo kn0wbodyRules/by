@@ -8,19 +8,40 @@ from app.schemas.auth import (
     LoginRequest,
     RegisterRequest,
     RegisterResponse,
+    ResendOTPRequest,
+    ResendOTPResponse,
     TokenResponse,
     UserOut,
     VerifyOTPRequest,
 )
-from app.services.auth_service import authenticate_user, register_user, verify_otp
+from app.services.auth_service import (
+    authenticate_user,
+    register_user,
+    resend_otp,
+    verify_otp,
+)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/register", response_model=RegisterResponse)
 def register(payload: RegisterRequest, db: Session = Depends(get_db)):
-    user = register_user(db, payload.email, payload.password)
-    return RegisterResponse(user_id=user.id, email=user.email)
+    user, email_sent = register_user(db, payload.email, payload.password)
+    message = (
+        "Registration successful. Check your email for a verification code."
+        if email_sent
+        else "Account created, but the verification email could not be sent. "
+        "Use /auth/resend-otp once mail delivery is working."
+    )
+    return RegisterResponse(
+        user_id=user.id, email=user.email, email_sent=email_sent, message=message
+    )
+
+
+@router.post("/resend-otp", response_model=ResendOTPResponse)
+def resend_otp_endpoint(payload: ResendOTPRequest, db: Session = Depends(get_db)):
+    email_sent = resend_otp(db, payload.email)
+    return ResendOTPResponse(email_sent=email_sent)
 
 
 @router.post("/verify-otp", response_model=TokenResponse)

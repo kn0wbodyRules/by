@@ -25,6 +25,9 @@ class Settings(BaseSettings):
     SMTP_USER: str = ""
     SMTP_PASSWORD: str = ""
     SMTP_FROM: str = "noreply@boqtool.local"
+    # Bounded so a blocked SMTP port (common on campus/ISP networks, which firewall
+    # ports 25/465/587) fails fast instead of hanging the request for minutes.
+    SMTP_TIMEOUT_SECONDS: int = 10
 
     # Gemini Vision
     GEMINI_API_KEY: str = ""

@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
-from app.core.exceptions import AuthError, DomainError
+from app.core.exceptions import AuthError, DomainError, EmailDeliveryError
 from app.core.security import (
     generate_otp_code,
     hash_otp_code,
@@ -17,17 +17,30 @@ from app.services.email_service import send_otp_email
 settings = get_settings()
 
 
-def _issue_otp(db: Session, user: User) -> None:
+def _issue_otp(db: Session, user: User) -> bool:
+    """Generate, persist and send a fresh OTP. Returns whether delivery succeeded.
+
+    Delivery failure is reported rather than raised: the account row is already
+    committed by this point, so aborting here would strand the user in an
+    unrecoverable state (cannot re-register — email taken; cannot log in — unverified;
+    cannot get a code — send failed). Callers surface `email_sent` instead, and the
+    user recovers via resend_otp once mail delivery is working.
+    """
     otp_code = generate_otp_code()
     user.otp_code_hash = hash_otp_code(otp_code)
     user.otp_expires_at = datetime.now(timezone.utc) + timedelta(minutes=settings.OTP_EXPIRY_MINUTES)
     user.otp_attempts = 0
     db.add(user)
     db.commit()
-    send_otp_email(user.email, otp_code)
+
+    try:
+        send_otp_email(user.email, otp_code)
+    except EmailDeliveryError:
+        return False
+    return True
 
 
-def register_user(db: Session, email: str, password: str) -> User:
+def register_user(db: Session, email: str, password: str) -> tuple[User, bool]:
     existing = db.query(User).filter(User.email == email).first()
     if existing:
         raise DomainError("An account with this email already exists")
@@ -37,8 +50,22 @@ def register_user(db: Session, email: str, password: str) -> User:
     db.commit()
     db.refresh(user)
 
-    _issue_otp(db, user)
-    return user
+    email_sent = _issue_otp(db, user)
+    return user, email_sent
+
+
+def resend_otp(db: Session, email: str) -> bool:
+    """Issue a fresh OTP for an existing unverified account.
+
+    Recovery path for the case where the original send failed (blocked SMTP port,
+    transient outage) or the code expired. Deliberately does not reveal whether the
+    address is registered — the response is identical either way, so this cannot be
+    used to enumerate accounts.
+    """
+    user = db.query(User).filter(User.email == email).first()
+    if not user or user.is_verified:
+        return True
+    return _issue_otp(db, user)
 
 
 def verify_otp(db: Session, email: str, otp_code: str) -> User:

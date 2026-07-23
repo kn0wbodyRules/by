@@ -9,7 +9,7 @@ import smtplib
 from email.message import EmailMessage
 
 from app.config import get_settings
-from app.core.exceptions import ConfigError
+from app.core.exceptions import ConfigError, EmailDeliveryError
 
 logger = logging.getLogger("boq.email")
 settings = get_settings()
@@ -31,8 +31,18 @@ def send_otp_email(to_email: str, otp_code: str) -> None:
         f"This code expires in {settings.OTP_EXPIRY_MINUTES} minutes."
     )
 
-    with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT) as server:
-        server.starttls()
-        if settings.SMTP_USER:
-            server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
-        server.send_message(message)
+    try:
+        with smtplib.SMTP(
+            settings.SMTP_HOST, settings.SMTP_PORT, timeout=settings.SMTP_TIMEOUT_SECONDS
+        ) as server:
+            server.starttls()
+            if settings.SMTP_USER:
+                server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
+            server.send_message(message)
+    except (OSError, smtplib.SMTPException) as exc:
+        # OSError covers socket-level failures (timeout / blocked port / DNS).
+        logger.error("OTP email to %s failed: %s: %s", to_email, type(exc).__name__, exc)
+        raise EmailDeliveryError(
+            "Could not send the verification email. The mail server was unreachable — "
+            "check SMTP settings and that outbound SMTP ports are not blocked on this network."
+        ) from exc
