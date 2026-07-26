@@ -23,6 +23,24 @@ from app.services.room_normalizer import (
 router = APIRouter(tags=["rooms"])
 
 
+@router.get("/rooms/{job_id}", response_model=list[RoomOut])
+def list_rooms(
+    job_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Read a job's rooms at any point in the flow.
+
+    Rooms were previously only observable as the return value of the endpoints
+    that create or edit them, and GET /boq requires the job to be calculated — so
+    a client that reloaded mid-flow had no way to recover what it had already
+    entered. Deliberately not status-gated: reading is safe in every state.
+    """
+    get_job_or_404(job_id, db, current_user)
+    rooms = db.query(Room).filter(Room.job_id == job_id).all()
+    return [room_to_out(r) for r in rooms]
+
+
 @router.post("/manual-rooms/{job_id}", response_model=list[RoomOut])
 def create_manual_rooms(
     job_id: str,

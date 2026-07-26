@@ -1,0 +1,154 @@
+@import 'tailwindcss';
+
+/*
+  "by" design system.
+
+  Brand runs on two surfaces: deep navy fields with cream cards sitting on them.
+  Primary CTAs invert that — near-black pills with cream text.
+
+  Token names follow the shadcn/ui contract (--color-background, --color-foreground,
+  --color-primary, …) so the vendored Button and MorphPanel components resolve their
+  utility classes without modification. Brand-specific names (navy/cream) exist
+  alongside them for cases where intent matters more than role.
+*/
+@theme {
+  /* ---- brand ---- */
+  --color-navy: #36355b;
+  --color-navy-deep: #2a2947;
+  --color-navy-ink: #1c1b30;
+  --color-cream: #f6e3c5;
+  --color-cream-soft: #fbf1e0;
+  --color-cream-dim: #e2cda9;
+
+  /* ---- shadcn semantic roles ----
+     Default surface is cream because cards, forms and the results screen all sit
+     on it; full-bleed navy is applied per-screen rather than globally. */
+  --color-background: #f6e3c5;
+  --color-foreground: #36355b;
+
+  --color-primary: #1c1b30;
+  --color-primary-foreground: #f6e3c5;
+
+  --color-secondary: #f6e3c5;
+  --color-secondary-foreground: #36355b;
+
+  --color-muted: #e2cda9;
+  --color-muted-foreground: #6b6a86;
+
+  --color-accent: #e2cda9;
+  --color-accent-foreground: #36355b;
+
+  --color-destructive: #a4121f;
+  --color-destructive-foreground: #f6e3c5;
+
+  --color-border: rgba(54, 53, 91, 0.18);
+  --color-input: rgba(54, 53, 91, 0.24);
+  --color-ring: #36355b;
+
+  /* ---- type: three fonts, strictly by role ---- */
+  --font-display: 'Alexandria', ui-sans-serif, system-ui, sans-serif;
+  --font-body: 'Amstelvar', Georgia, ui-serif, serif;
+  --font-ui: 'Amaranth', ui-sans-serif, system-ui, sans-serif;
+
+  /* Figma uses consistently large radii (21–32px). */
+  --radius: 1.5rem;
+  --radius-card: 1.75rem;
+  --radius-pill: 9999px;
+}
+
+@layer base {
+  /*
+    Tailwind v4 defaults `border` to currentColor; without this every bordered
+    element would inherit text color instead of the token.
+  */
+  *,
+  ::after,
+  ::before {
+    border-color: var(--color-border);
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    margin: 0;
+    background: var(--color-navy);
+    color: var(--color-foreground);
+    font-family: var(--font-body);
+    font-variation-settings: 'wght' 400;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    margin: 0;
+  }
+
+  /* Amstelvar is variable — drive hierarchy off its weight axis, not font swaps. */
+  strong,
+  b {
+    font-variation-settings: 'wght' 700;
+    font-weight: 400;
+  }
+
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+  }
+}
+
+@layer utilities {
+  /* Material Symbols — the project's only icon source. */
+  .icon {
+    font-family: 'Material Symbols Rounded';
+    font-weight: normal;
+    font-style: normal;
+    line-height: 1;
+    letter-spacing: normal;
+    text-transform: none;
+    display: inline-block;
+    white-space: nowrap;
+    word-wrap: normal;
+    direction: ltr;
+    -webkit-font-feature-settings: 'liga';
+    -webkit-font-smoothing: antialiased;
+    user-select: none;
+  }
+
+  .icon-filled {
+    font-variation-settings: 'FILL' 1;
+  }
+
+  .font-display {
+    font-family: var(--font-display);
+  }
+  .font-body {
+    font-family: var(--font-body);
+  }
+  .font-ui {
+    font-family: var(--font-ui);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -159,3 +159,58 @@ def test_job_belonging_to_another_user_returns_404_not_403(client, auth_headers,
 def test_missing_auth_header_rejected_on_protected_route(client):
     resp = client.get("/plans")
     assert resp.status_code == 401
+
+
+def test_list_rooms_is_readable_at_every_stage(client, auth_headers):
+    """GET /rooms is the flow's resume path — a client that reloads mid-flow has no
+    other way to recover its rooms, so unlike the write endpoints it must not be
+    status-gated."""
+    job_id = _create_uploaded_job(client, auth_headers)
+
+    # Freshly uploaded: no rooms yet, but the endpoint answers rather than 409s.
+    resp = client.get(f"/rooms/{job_id}", headers=auth_headers)
+    assert resp.status_code == 200
+    assert resp.json() == []
+
+    body = {
+        "rooms": [
+            {
+                "room_name": "Kitchen",
+                "length_ft": 12,
+                "width_ft": 10,
+                "ceiling_height_ft": 10,
+                "wall_thickness_ft": 0.75,
+                "floor_type": "tile",
+                "door_count": 1,
+                "window_count": 1,
+            }
+        ]
+    }
+    assert client.post(f"/manual-rooms/{job_id}", headers=auth_headers, json=body).status_code == 200
+
+    resp = client.get(f"/rooms/{job_id}", headers=auth_headers)
+    assert resp.status_code == 200
+    rooms = resp.json()
+    assert len(rooms) == 1
+    assert rooms[0]["room_name"] == "Kitchen"
+    assert rooms[0]["room_type"] == "kitchen"
+    assert rooms[0]["dimensions"]["wall_thickness_ft"] == 0.75
+
+
+def test_list_rooms_rejects_another_users_job(client, auth_headers, monkeypatch):
+    """Room data must stay scoped to its owner."""
+    job_id = _create_uploaded_job(client, auth_headers)
+
+    captured = {}
+    monkeypatch.setattr(
+        "app.services.auth_service.send_otp_email",
+        lambda to_email, otp_code: captured.__setitem__("otp_code", otp_code),
+    )
+    client.post("/auth/register", json={"email": "other@example.com", "password": "password123"})
+    other = client.post(
+        "/auth/verify-otp",
+        json={"email": "other@example.com", "otp_code": captured["otp_code"]},
+    ).json()["access_token"]
+
+    resp = client.get(f"/rooms/{job_id}", headers={"Authorization": f"Bearer {other}"})
+    assert resp.status_code == 404
