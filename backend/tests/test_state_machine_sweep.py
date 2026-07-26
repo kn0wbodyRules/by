@@ -214,3 +214,15 @@ def test_list_rooms_rejects_another_users_job(client, auth_headers, monkeypatch)
 
     resp = client.get(f"/rooms/{job_id}", headers={"Authorization": f"Bearer {other}"})
     assert resp.status_code == 404
+
+
+def test_export_csv_rejected_before_calculated(client, auth_headers):
+    job_id = _create_uploaded_job(client, auth_headers)
+    resp = client.get(f"/export/{job_id}?format=csv", headers=auth_headers)
+    assert resp.status_code == 409
+
+
+def test_export_rejects_unknown_format(client, auth_headers):
+    job_id = _create_uploaded_job(client, auth_headers)
+    resp = client.get(f"/export/{job_id}?format=docx", headers=auth_headers)
+    assert resp.status_code == 422

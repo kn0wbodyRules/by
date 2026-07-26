@@ -13,6 +13,7 @@ from app.core.security import (
 )
 from app.models.user import User
 from app.services.email_service import send_otp_email
+from app.services.oauth_service import OAuthProfile
 
 settings = get_settings()
 
@@ -40,18 +41,81 @@ def _issue_otp(db: Session, user: User) -> bool:
     return True
 
 
-def register_user(db: Session, email: str, password: str) -> tuple[User, bool]:
+def register_user(
+    db: Session, email: str, password: str, name: str | None = None
+) -> tuple[User, bool]:
     existing = db.query(User).filter(User.email == email).first()
     if existing:
         raise DomainError("An account with this email already exists")
 
-    user = User(email=email, hashed_password=hash_password(password), is_verified=False)
+    user = User(
+        email=email,
+        name=(name or None),
+        hashed_password=hash_password(password),
+        is_verified=False,
+    )
     db.add(user)
     db.commit()
     db.refresh(user)
 
     email_sent = _issue_otp(db, user)
     return user, email_sent
+
+
+def login_with_oauth(db: Session, profile: OAuthProfile) -> User:
+    """Resolve a provider identity to a local account, creating or linking as needed.
+
+    Matching is on the provider's immutable subject id. Falling back to email is
+    only safe when the provider says the address is verified — otherwise someone
+    who sets an unverified address at a provider could take over an existing
+    password account here.
+    """
+    user = (
+        db.query(User)
+        .filter(
+            User.oauth_provider == profile.provider,
+            User.oauth_subject == profile.subject,
+        )
+        .first()
+    )
+
+    if user is None and profile.email:
+        by_email = db.query(User).filter(User.email == profile.email).first()
+        if by_email is not None:
+            if not profile.email_verified:
+                raise AuthError(
+                    f"An account already uses {profile.email}. Sign in with your "
+                    f"password, or verify that address with {profile.provider} first."
+                )
+            by_email.oauth_provider = profile.provider
+            by_email.oauth_subject = profile.subject
+            user = by_email
+
+    if user is None:
+        if not profile.email:
+            raise AuthError(
+                f"{profile.provider} did not share a verified email address, so an "
+                "account cannot be created."
+            )
+        user = User(
+            email=profile.email,
+            name=profile.name,
+            # No password: this account can only ever sign in via its provider.
+            hashed_password=None,
+            oauth_provider=profile.provider,
+            oauth_subject=profile.subject,
+        )
+        db.add(user)
+
+    # The provider already proved control of the mailbox, so no OTP round-trip.
+    user.is_verified = True
+    if profile.name and not user.name:
+        user.name = profile.name
+
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
 
 
 def resend_otp(db: Session, email: str) -> bool:
@@ -97,6 +161,14 @@ def verify_otp(db: Session, email: str, otp_code: str) -> User:
 
 def authenticate_user(db: Session, email: str, password: str) -> User:
     user = db.query(User).filter(User.email == email).first()
+
+    # An OAuth-only account has no password hash to compare against. Say so
+    # explicitly rather than letting verify_password choke on None — the user
+    # needs to know which button to press.
+    if user is not None and user.hashed_password is None:
+        provider = user.oauth_provider or "your sign-in provider"
+        raise AuthError(f"This account signs in with {provider}. Use that button instead.")
+
     if not user or not verify_password(password, user.hashed_password):
         raise AuthError("Incorrect email or password")
     if not user.is_verified:

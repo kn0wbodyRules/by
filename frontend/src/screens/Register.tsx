@@ -29,10 +29,7 @@ export function Register() {
 
     setBusy(true)
     try {
-      const res = await api.register(email, password)
-      // The backend has no name column; the design shows one on the dashboard
-      // profile card, so it lives client-side until a users.name field exists.
-      localStorage.setItem('by.display_name', name)
+      const res = await api.register(email, password, name)
       navigate('/verify', {
         state: { email, emailSent: res.email_sent, message: res.message },
       })

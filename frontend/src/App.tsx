@@ -6,6 +6,7 @@ import { Constraints } from '@/screens/Constraints'
 import { Dashboard } from '@/screens/Dashboard'
 import { Intro } from '@/screens/Intro'
 import { Login } from '@/screens/Login'
+import { OAuthCallback } from '@/screens/OAuthCallback'
 import { Register } from '@/screens/Register'
 import { Results } from '@/screens/Results'
 import { RoomByRoom } from '@/screens/RoomByRoom'
@@ -39,6 +40,8 @@ function AnimatedRoutes() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/verify" element={<VerifyOtp />} />
+        {/* Where the backend lands the browser after a provider sign-in. */}
+        <Route path="/auth/callback" element={<OAuthCallback />} />
 
         <Route
           path="/dashboard"

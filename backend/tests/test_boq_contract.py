@@ -174,3 +174,43 @@ def test_excel_export_produces_valid_xlsx_bytes(db):
     # .xlsx is a zip archive — PK magic number
     assert xlsx_bytes.startswith(b"PK")
     assert len(xlsx_bytes) > 500
+
+
+def test_csv_export_renders_real_rows(db):
+    """Generates the actual file rather than only checking status codes — the
+    first CSV implementation called .value on `unit`, which is a plain str in the
+    BOQ schema even though room_type and correction_confidence are Enums, and a
+    status-only test sailed straight past the resulting 500."""
+    from app.services.export_csv import generate_boq_csv
+
+    job, room = _make_job_with_room(db)
+    boq = build_boq_response(job, [room])
+
+    text = generate_boq_csv(boq).decode("utf-8-sig")
+    lines = [line for line in text.splitlines() if line.strip()]
+
+    assert any(line.startswith("# Project,Contract Test House") for line in lines)
+
+    header = next(line for line in lines if line.startswith("room_name,"))
+    assert header.split(",") == [
+        "room_name",
+        "room_type",
+        "area_sqft",
+        "material_name",
+        "theoretical_quantity",
+        "correction_factor",
+        "correction_confidence",
+        "quantity",
+        "unit",
+        "rate_per_unit",
+        "total_cost",
+    ]
+
+    data_row = next(line for line in lines if line.startswith("Common Toilet,"))
+    cells = data_row.split(",")
+    # Enum columns must serialise to their values, not "RoomType.BATHROOM".
+    assert cells[1] == "bathroom"
+    assert cells[3] == "flooring_vitrified_tile"
+    assert cells[8] == "sqft"
+
+    assert lines[-1].startswith("TOTAL,")

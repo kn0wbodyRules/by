@@ -78,12 +78,26 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   return (await res.json()) as T
 }
 
+/** Providers the backend implements. */
+export type OAuthProvider = 'google' | 'github'
+
+/**
+ * Full-page redirect to the provider's consent screen.
+ *
+ * Deliberately not a fetch: the browser has to actually navigate to the
+ * provider, and the backend redirects back to /auth/callback with the token in
+ * the URL fragment.
+ */
+export function oauthSignInUrl(provider: OAuthProvider) {
+  return `/api/auth/oauth/${provider}/start`
+}
+
 export const api = {
   // ---- auth ----
-  register: (email: string, password: string) =>
+  register: (email: string, password: string, name?: string) =>
     request<RegisterResponse>('/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, password, name: name || null }),
     }),
 
   verifyOtp: (email: string, otp_code: string) =>
@@ -104,7 +118,14 @@ export const api = {
       body: JSON.stringify({ email, password }),
     }),
 
-  me: () => request<{ id: string; email: string; is_verified: boolean }>('/auth/me'),
+  me: () =>
+    request<{
+      id: string
+      email: string
+      name: string | null
+      is_verified: boolean
+      oauth_provider: string | null
+    }>('/auth/me'),
 
   // ---- plans / jobs ----
   listPlans: () => request<JobOut[]>('/plans'),
@@ -172,17 +193,18 @@ export const api = {
     }),
 
   /** Streams the generated file straight to a browser download. */
-  async download(jobId: string, format: 'pdf' | 'excel', projectName: string) {
+  async download(jobId: string, format: 'pdf' | 'excel' | 'csv', projectName: string) {
     const res = await fetch(`/api/export/${jobId}?format=${format}`, {
       headers: auth.token ? { Authorization: `Bearer ${auth.token}` } : {},
     })
     if (!res.ok) throw new ApiError(res.status, 'Export failed')
 
+    const extensions = { pdf: 'pdf', excel: 'xlsx', csv: 'csv' } as const
     const blob = await res.blob()
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `${projectName.replace(/\s+/g, '-')}-BOQ.${format === 'pdf' ? 'pdf' : 'xlsx'}`
+    a.download = `${projectName.replace(/\s+/g, '-')}-BOQ.${extensions[format]}`
     document.body.appendChild(a)
     a.click()
     a.remove()

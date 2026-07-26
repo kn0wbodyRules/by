@@ -4,6 +4,7 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field
 class RegisterRequest(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8)
+    name: str | None = None
 
 
 class RegisterResponse(BaseModel):
@@ -44,4 +45,8 @@ class UserOut(BaseModel):
 
     id: str
     email: EmailStr
+    name: str | None = None
     is_verified: bool
+    # Which provider this account signs in with, if any — lets the UI show
+    # "Signed in with Google" instead of offering a password change.
+    oauth_provider: str | None = None

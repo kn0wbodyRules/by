@@ -165,6 +165,12 @@ export function Results() {
                     onClick={() => api.download(jobId, 'excel', boq.project_name)}
                     delay={0.1}
                   />
+                  <DownloadButton
+                    icon="csv"
+                    label="CSV"
+                    onClick={() => api.download(jobId, 'csv', boq.project_name)}
+                    delay={0.2}
+                  />
                 </div>
               </div>
 

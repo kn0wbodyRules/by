@@ -35,7 +35,9 @@ export function Dashboard() {
   const [busy, setBusy] = React.useState<string | null>(null)
   const [error, setError] = React.useState<string | null>(null)
 
-  const displayName = localStorage.getItem('by.display_name') || 'Estimator'
+  // Read from the account rather than local storage, so the name follows the
+  // user to any browser — and OAuth sign-ins bring one along automatically.
+  const [displayName, setDisplayName] = React.useState('Estimator')
 
   const load = React.useCallback(async () => {
     try {
@@ -47,6 +49,12 @@ export function Dashboard() {
 
   React.useEffect(() => {
     void load()
+    void api
+      .me()
+      .then((user) => setDisplayName(user.name || user.email.split('@')[0] || 'Estimator'))
+      // A failed profile fetch shouldn't blank the dashboard — the greeting just
+      // stays generic.
+      .catch(() => undefined)
   }, [load])
 
   const visible = plans.filter((p) =>

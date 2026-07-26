@@ -29,6 +29,20 @@ class Settings(BaseSettings):
     # ports 25/465/587) fails fast instead of hanging the request for minutes.
     SMTP_TIMEOUT_SECONDS: int = 10
 
+    # OAuth sign-in (Google, GitHub).
+    # Leave the client id/secret blank to keep a provider mocked; OAUTH_MOCK_MODE
+    # forces mocking for every provider. Mock sign-in is refused in production.
+    OAUTH_MOCK_MODE: bool = True
+    # Must match the redirect URI registered in each provider's developer console:
+    #   <base>/auth/oauth/google/callback   and   <base>/auth/oauth/github/callback
+    OAUTH_REDIRECT_BASE: str = "http://127.0.0.1:8000"
+    # Where the backend sends the browser once a token has been issued.
+    OAUTH_SUCCESS_REDIRECT: str = "http://localhost:5173/auth/callback"
+    GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_CLIENT_SECRET: str = ""
+    GITHUB_CLIENT_ID: str = ""
+    GITHUB_CLIENT_SECRET: str = ""
+
     # Gemini Vision
     GEMINI_API_KEY: str = ""
     GEMINI_MODEL: str = "gemini-2.0-flash"

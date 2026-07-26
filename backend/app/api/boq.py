@@ -10,6 +10,7 @@ from app.models.room import Room
 from app.models.user import User
 from app.schemas.boq import BOQResponse
 from app.services.boq_assembler import build_boq_response
+from app.services.export_csv import generate_boq_csv
 from app.services.export_excel import generate_boq_excel
 from app.services.export_pdf import generate_boq_pdf
 from app.services.job_state_machine import assert_transition, require_status
@@ -32,7 +33,7 @@ def get_boq(
 @router.get("/export/{job_id}")
 def export_boq(
     job_id: str,
-    format: Literal["pdf", "excel"],
+    format: Literal["pdf", "excel", "csv"],
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -45,6 +46,10 @@ def export_boq(
         content = generate_boq_pdf(boq)
         media_type = "application/pdf"
         filename = f"boq_{job_id}.pdf"
+    elif format == "csv":
+        content = generate_boq_csv(boq)
+        media_type = "text/csv"
+        filename = f"boq_{job_id}.csv"
     else:
         content = generate_boq_excel(boq)
         media_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
