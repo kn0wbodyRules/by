@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "@astryxdesign/cli": "^0.1.8",
+    "@astryxdesign/core": "^0.1.8",
+    "@astryxdesign/theme-neutral": "^0.1.8",
+    "motion": "^12.42.2"
+  }
+}
