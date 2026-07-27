@@ -137,7 +137,13 @@ def test_profile_without_email_cannot_create_account(db):
 # ------------------------------------------------------------------- mock mode
 
 
-def test_mock_profile_is_used_when_credentials_are_blank():
+def test_mock_profile_is_used_when_credentials_are_blank(monkeypatch):
+    # Asserted explicitly rather than relying on the developer's .env, which may
+    # legitimately hold real credentials.
+    monkeypatch.setattr(oauth_service.settings, "OAUTH_MOCK_MODE", False)
+    monkeypatch.setattr(oauth_service.settings, "GITHUB_CLIENT_ID", "")
+    monkeypatch.setattr(oauth_service.settings, "GITHUB_CLIENT_SECRET", "")
+
     provider = oauth_service.get_provider("github")
     assert oauth_service.is_mocked(provider) is True
 
@@ -145,3 +151,19 @@ def test_mock_profile_is_used_when_credentials_are_blank():
     assert profile.provider == "github"
     assert profile.email.endswith("@github.mock")
     assert profile.email_verified is True
+
+
+def test_real_credentials_disable_mocking(monkeypatch):
+    """The bug this guards: credentials were being ignored because OAUTH_MOCK_MODE
+    defaulted to true, so sign-in silently used a fake user instead of Google."""
+    monkeypatch.setattr(oauth_service.settings, "OAUTH_MOCK_MODE", False)
+    monkeypatch.setattr(oauth_service.settings, "GOOGLE_CLIENT_ID", "real-id")
+    monkeypatch.setattr(oauth_service.settings, "GOOGLE_CLIENT_SECRET", "real-secret")
+
+    provider = oauth_service.get_provider("google")
+    assert oauth_service.is_mocked(provider) is False
+
+    url = oauth_service.authorization_url(provider, oauth_service.issue_state("google"))
+    assert url.startswith("https://accounts.google.com/o/oauth2/v2/auth?")
+    assert "client_id=real-id" in url
+    assert "auth%2Foauth%2Fgoogle%2Fcallback" in url

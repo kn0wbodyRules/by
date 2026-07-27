@@ -15,7 +15,12 @@ settings = get_settings()
 # Tests must never hit the Gemini API. Forcing mock mode makes the Stage 2b embedding
 # room-classifier escalation a no-op (returns None -> keyword result stands), so
 # classification stays deterministic and offline regardless of what .env has enabled.
+# It also keeps the QBQ chat orchestrator on its offline keyword parser.
 settings.GEMINI_MOCK_MODE = True
+
+# Likewise for sign-in: a developer with real Google/GitHub credentials in .env
+# must not have the suite start negotiating with live OAuth providers.
+settings.OAUTH_MOCK_MODE = True
 
 _RATE_TABLE_SEED = json.loads(
     (Path(__file__).resolve().parents[1] / "app" / "seed_data" / "rate_table_seed.json").read_text()

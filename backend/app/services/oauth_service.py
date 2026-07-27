@@ -22,6 +22,7 @@ anyone sign in as an arbitrary email.
 import hashlib
 import hmac
 import json
+import logging
 import secrets
 import time
 import urllib.parse
@@ -31,6 +32,7 @@ from dataclasses import dataclass
 from app.config import get_settings
 from app.core.exceptions import AuthError, ConfigError, DomainError
 
+logger = logging.getLogger("boq.oauth")
 settings = get_settings()
 
 STATE_TTL_SECONDS = 600
@@ -89,10 +91,24 @@ def get_provider(name: str) -> ProviderConfig:
 
 
 def is_mocked(provider: ProviderConfig) -> bool:
-    """Mock unless this provider has real credentials and mock mode is off."""
+    """Mock unless this provider has real credentials and mock mode is off.
+
+    Credentials being present while OAUTH_MOCK_MODE is still on is almost always
+    a mistake — someone registered a developer app and expected it to take
+    effect — so say so loudly rather than silently signing them in as a fake user.
+    """
+    has_credentials = bool(provider.client_id and provider.client_secret)
+
     if settings.OAUTH_MOCK_MODE:
+        if has_credentials:
+            logger.warning(
+                "%s has real credentials but OAUTH_MOCK_MODE=true, so mock sign-in "
+                "is being used. Set OAUTH_MOCK_MODE=false to use the real provider.",
+                provider.name,
+            )
         return True
-    return not (provider.client_id and provider.client_secret)
+
+    return not has_credentials
 
 
 def redirect_uri(provider_name: str) -> str:

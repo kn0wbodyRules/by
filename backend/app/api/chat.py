@@ -17,4 +17,6 @@ def chat(
     db: Session = Depends(get_db),
 ):
     job = get_job_or_404(job_id, db, current_user)
-    return handle_chat_message(job, payload.message)
+    # The orchestrator can now persist constraint changes and re-run the
+    # estimate, so it needs the session rather than just the job row.
+    return handle_chat_message(db, job, payload.message)

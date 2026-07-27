@@ -32,7 +32,11 @@ class Settings(BaseSettings):
     # OAuth sign-in (Google, GitHub).
     # Leave the client id/secret blank to keep a provider mocked; OAUTH_MOCK_MODE
     # forces mocking for every provider. Mock sign-in is refused in production.
-    OAUTH_MOCK_MODE: bool = True
+    # Force the built-in mock provider even when credentials exist (useful for
+    # tests). Leaving this false still falls back to mocking any provider whose
+    # client id/secret is blank — so adding real credentials is enough to go
+    # live, without also remembering to flip a flag.
+    OAUTH_MOCK_MODE: bool = False
     # Must match the redirect URI registered in each provider's developer console:
     #   <base>/auth/oauth/google/callback   and   <base>/auth/oauth/github/callback
     OAUTH_REDIRECT_BASE: str = "http://127.0.0.1:8000"
