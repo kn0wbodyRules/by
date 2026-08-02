@@ -228,8 +228,8 @@ function BoqTable({ boq }: { boq: BOQResponse }) {
               </tr>
             </thead>
             <tbody className="font-body text-navy">
-              {boq.rooms.flatMap((room, ri) =>
-                (room.materials ?? []).map((m, mi) => (
+              {boq.rooms.flatMap((room, ri) => {
+                const rows = (room.materials ?? []).map((m, mi) => (
                   <motion.tr
                     key={`${room.room_id}-${m.material_name}`}
                     initial={{ opacity: 0 }}
@@ -252,8 +252,26 @@ function BoqTable({ boq }: { boq: BOQResponse }) {
                       ₹{m.total_cost.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
                     </td>
                   </motion.tr>
-                )),
-              )}
+                ))
+
+                // Shows exactly what the exception agent did to this room, right
+                // above its materials — transparency for a step that silently
+                // changed what would otherwise have been computed.
+                if (room.exception_applied) {
+                  rows.unshift(
+                    <tr key={`${room.room_id}-exception`} className="border-navy/10 border-t bg-amber-50/60">
+                      <td />
+                      <td colSpan={5} className="px-5 py-2">
+                        <span className="font-ui text-navy/60 inline-flex items-center gap-1.5 text-xs">
+                          <Icon name="auto_awesome" className="text-[14px]" />
+                          {room.exception_applied}
+                        </span>
+                      </td>
+                    </tr>,
+                  )
+                }
+                return rows
+              })}
             </tbody>
             <tfoot>
               <tr className="bg-navy/5 font-display text-navy border-navy/15 border-t-2">

@@ -29,5 +29,16 @@ class Room(Base, TimestampMixin):
     source: Mapped[RoomSource] = mapped_column(room_source_enum, nullable=False)
     confirmed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
+    # Free-text special requirement for this room only (e.g. "skip plaster here",
+    # "no false ceiling"), entered on the Room-by-Room/Confirm screens. Applied by
+    # exception_service during /calculate, after the normal material set is
+    # computed — never read by the deterministic engine itself.
+    exception_text: Mapped[str | None] = mapped_column(String, nullable=True)
+    # What the exception agent actually did with exception_text, set during
+    # /calculate. Persisted (not recomputed on read) so GET /boq can show it
+    # without re-invoking the agent — re-running it on every read would be both
+    # wasteful and, with the real Gemini path, non-deterministic between calls.
+    exception_applied: Mapped[str | None] = mapped_column(String, nullable=True)
+
     job: Mapped["Job"] = relationship(back_populates="rooms")
     materials: Mapped[list["Material"]] = relationship(back_populates="room", cascade="all, delete-orphan")

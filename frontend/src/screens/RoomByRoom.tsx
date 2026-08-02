@@ -21,6 +21,7 @@ const BLANK_ROOM: ManualRoomInput = {
   floor_type: 'tile',
   door_count: 1,
   window_count: 1,
+  exception_text: '',
 }
 
 export function RoomByRoom() {
@@ -54,6 +55,7 @@ export function RoomByRoom() {
                 floor_type: r.floor_type || 'tile',
                 door_count: r.door_count,
                 window_count: r.window_count,
+                exception_text: r.exception_text ?? '',
               }))
             : [BLANK_ROOM],
         )
@@ -134,6 +136,10 @@ export function RoomByRoom() {
           floor_type: rooms[i]?.floor_type,
           door_count: rooms[i]?.door_count,
           window_count: rooms[i]?.window_count,
+          // "" (not null) — the backend's edit-apply logic drops null fields to
+          // mean "unchanged", so clearing a previously-set exception has to be a
+          // real empty string, not the field's absence.
+          exception_text: (rooms[i]?.exception_text ?? '').trim(),
         })),
       )
 
@@ -243,6 +249,25 @@ export function RoomByRoom() {
                         </option>
                       ))}
                     </select>
+                  </div>
+
+                  <div className="pt-4">
+                    <label htmlFor="exception-text" className="font-ui text-navy/70 flex items-center gap-2">
+                      <Icon name="auto_awesome" className="text-[16px]" />
+                      Special requirement for this room (optional)
+                    </label>
+                    <textarea
+                      id="exception-text"
+                      value={current.exception_text ?? ''}
+                      onChange={(e) => patch({ exception_text: e.target.value })}
+                      placeholder='e.g. "no plaster in this room", "extra 20% tiles for cutting waste"'
+                      rows={2}
+                      className="font-body text-navy placeholder:text-navy/35 border-navy/15 mt-2 w-full resize-none rounded-xl border bg-white/40 p-3 text-sm outline-none"
+                    />
+                    <p className="font-ui text-navy/40 mt-1 text-xs">
+                      Applied to this room only when the estimate is calculated — grade/brand changes
+                      belong on the Constraints screen instead.
+                    </p>
                   </div>
                 </div>
 

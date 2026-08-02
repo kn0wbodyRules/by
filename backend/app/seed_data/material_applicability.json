@@ -1,9 +1,29 @@
 {
+  "_comment": "Keyed by room_type. Formulas are fixed engineering math (unchanged by type) — only WHICH materials apply to a given room type varies here. These defaults are a reasonable starting point, not authoritative civil-engineering rules; adjust freely as real project experience informs them. `other` and any room_type not listed fall back to the full material set, since under-computing an unknown room is a worse failure mode than over-computing one.",
   "materials": [
     {"material_name": "flooring_vitrified_tile", "unit": "sqft", "formula": "flooring"},
     {"material_name": "wall_paint_emulsion", "unit": "sqft", "formula": "paint_plaster"},
     {"material_name": "cement_plaster", "unit": "sqft", "formula": "paint_plaster"},
     {"material_name": "brickwork", "unit": "cft", "formula": "brickwork_concrete"},
     {"material_name": "concrete_rcc", "unit": "cft", "formula": "brickwork_concrete"}
-  ]
+  ],
+  "by_room_type": {
+    "bedroom": ["flooring_vitrified_tile", "wall_paint_emulsion", "cement_plaster", "brickwork", "concrete_rcc"],
+    "living_room": ["flooring_vitrified_tile", "wall_paint_emulsion", "cement_plaster", "brickwork", "concrete_rcc"],
+    "kitchen": ["flooring_vitrified_tile", "wall_paint_emulsion", "cement_plaster", "brickwork", "concrete_rcc"],
+    "pooja_room": ["flooring_vitrified_tile", "wall_paint_emulsion", "cement_plaster", "brickwork", "concrete_rcc"],
+    "corridor": ["flooring_vitrified_tile", "wall_paint_emulsion", "cement_plaster", "brickwork", "concrete_rcc"],
+
+    "bathroom": ["flooring_vitrified_tile", "cement_plaster", "brickwork", "concrete_rcc"],
+    "utility": ["flooring_vitrified_tile", "cement_plaster", "brickwork", "concrete_rcc"],
+    "store_room": ["flooring_vitrified_tile", "cement_plaster", "brickwork", "concrete_rcc"],
+
+    "balcony": ["flooring_vitrified_tile", "brickwork", "concrete_rcc"],
+
+    "other": ["flooring_vitrified_tile", "wall_paint_emulsion", "cement_plaster", "brickwork", "concrete_rcc"]
+  },
+  "_notes": {
+    "bathroom/utility/store_room": "Skip wall_paint_emulsion — walls in these spaces are typically tiled or left unfinished rather than painted, in common Indian residential practice. Plaster stays as the base layer under tile/finish.",
+    "balcony": "Skip both wall_paint_emulsion and cement_plaster — balconies are frequently left exposed/unfinished on the parapet. Keeps flooring + structural (brick/concrete)."
+  }
 }

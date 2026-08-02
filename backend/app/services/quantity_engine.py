@@ -12,10 +12,17 @@ from typing import NamedTuple, Protocol
 
 _SEED_DATA_DIR = Path(__file__).resolve().parents[1] / "seed_data"
 _constants = json.loads((_SEED_DATA_DIR / "opening_area_constants.json").read_text())
-_material_applicability = json.loads((_SEED_DATA_DIR / "material_applicability.json").read_text())
+_applicability_config = json.loads((_SEED_DATA_DIR / "material_applicability.json").read_text())
 
 DEFAULT_DOOR_OPENING_AREA_SQFT: float = _constants["door_opening_area_sqft"]
 DEFAULT_WINDOW_OPENING_AREA_SQFT: float = _constants["window_opening_area_sqft"]
+
+# material_name -> {formula, unit}, and room_type -> which material_names apply.
+_MATERIALS_BY_NAME: dict[str, dict] = {
+    entry["material_name"]: entry for entry in _applicability_config["materials"]
+}
+_MATERIALS_BY_ROOM_TYPE: dict[str, list[str]] = _applicability_config["by_room_type"]
+_FULL_MATERIAL_SET: list[str] = list(_MATERIALS_BY_NAME.keys())
 
 
 def calc_wall_perimeter_ft(length_ft: float, width_ft: float) -> float:
@@ -73,6 +80,7 @@ class RoomDimensions(Protocol):
     """Duck-typed — satisfied by the Room ORM model without importing it here,
     keeping this module free of any SQLAlchemy dependency."""
 
+    room_type: str
     length_ft: float
     width_ft: float
     ceiling_height_ft: float
@@ -88,11 +96,18 @@ class TheoreticalMaterialQuantity(NamedTuple):
     unit: str
 
 
+def materials_for_room_type(room_type: str) -> list[str]:
+    """Which material_names apply to a given room_type, per
+    seed_data/material_applicability.json. Unlisted/unrecognised types (including
+    the enum value "other") fall back to the full set — under-computing an
+    unfamiliar room is a worse failure mode than over-computing one."""
+    return _MATERIALS_BY_ROOM_TYPE.get(room_type, _FULL_MATERIAL_SET)
+
+
 def compute_room_theoretical_quantities(room: RoomDimensions) -> list[TheoreticalMaterialQuantity]:
-    """Expands a room into its theoretical material quantities per
-    seed_data/material_applicability.json. Every confirmed room gets the same
-    material set in this pass — a documented MVP simplification (no per-room-type
-    variation, e.g. balconies still get plaster) — extend the config to change that.
+    """Expands a room into its theoretical material quantities. WHICH materials
+    apply is decided by room_type (materials_for_room_type, config-driven); the
+    formula for each material is fixed engineering math regardless of type.
     """
     length_ft = float(room.length_ft)
     width_ft = float(room.width_ft)
@@ -100,8 +115,11 @@ def compute_room_theoretical_quantities(room: RoomDimensions) -> list[Theoretica
     wall_thickness_ft = float(room.wall_thickness_ft)
     area_sqft = float(room.area_sqft)
 
+    room_type = room.room_type.value if hasattr(room.room_type, "value") else str(room.room_type)
+
     results: list[TheoreticalMaterialQuantity] = []
-    for entry in _material_applicability["materials"]:
+    for material_name in materials_for_room_type(room_type):
+        entry = _MATERIALS_BY_NAME[material_name]
         formula = entry["formula"]
         if formula == "flooring":
             quantity = calc_flooring_quantity(area_sqft)
@@ -115,5 +133,5 @@ def compute_room_theoretical_quantities(room: RoomDimensions) -> list[Theoretica
             )
         else:
             raise ValueError(f"Unknown formula '{formula}' in material_applicability.json")
-        results.append(TheoreticalMaterialQuantity(entry["material_name"], quantity, entry["unit"]))
+        results.append(TheoreticalMaterialQuantity(material_name, quantity, entry["unit"]))
     return results

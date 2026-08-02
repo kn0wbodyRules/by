@@ -16,6 +16,7 @@ from app.schemas.boq import BOQConstraints, BOQResponse, BOQRoomOut, MaterialLin
 from app.schemas.constraints import MaterialOverride
 from app.schemas.room import Dimensions
 from app.services.correction_service import get_active_correction_model
+from app.services.exception_service import MaterialSnapshot, resolve_exception
 from app.services.job_state_machine import assert_transition
 from app.services.quantity_engine import compute_room_theoretical_quantities
 from app.services.rate_service import get_rate
@@ -38,7 +39,30 @@ def calculate_job_boq(db: Session, job: Job) -> BOQResponse:
 
     total_cost = 0.0
     for room in rooms:
-        for material_name, theoretical_quantity, unit in compute_room_theoretical_quantities(room):
+        room_materials = compute_room_theoretical_quantities(room)
+
+        # Exception agent: acts on this room's own material set only, after the
+        # normal room-type-driven set is computed and before rates are looked up
+        # (no point pricing a line that's about to be excluded). Exclusion drops
+        # a material outright; an adjustment multiplier is tracked separately
+        # rather than baked into room_materials, so theoretical_quantity keeps
+        # meaning "what the pure formula said" — the same reason correction_factor
+        # is a separate column rather than pre-multiplied into the quantity.
+        exception_multipliers: dict[str, float] = {}
+        if room.exception_text:
+            result = resolve_exception(
+                room.exception_text,
+                [MaterialSnapshot(m.material_name, m.quantity, m.unit) for m in room_materials],
+            )
+            if result.exclude:
+                room_materials = [m for m in room_materials if m.material_name not in result.exclude]
+            exception_multipliers = result.adjustments
+            room.exception_applied = result.note or None
+        else:
+            room.exception_applied = None
+        db.add(room)
+
+        for material_name, theoretical_quantity, unit in room_materials:
             try:
                 rate_row = get_rate(db, material_name, unit, job.location)
             except NotFoundError:
@@ -51,7 +75,8 @@ def calculate_job_boq(db: Session, job: Job) -> BOQResponse:
                 theoretical_quantity=theoretical_quantity,
                 room_type=room.room_type.value,
             )
-            quantity = theoretical_quantity * correction.correction_factor
+            exception_multiplier = exception_multipliers.get(material_name, 1.0)
+            quantity = theoretical_quantity * correction.correction_factor * exception_multiplier
             rate_per_unit = float(rate_row.rate_per_unit)
             line_total_cost = quantity * rate_per_unit
 
@@ -121,6 +146,8 @@ def build_boq_response(job: Job, rooms: list[Room]) -> BOQResponse:
                 confirmed=room.confirmed,
                 materials=materials,
                 room_total_cost=sum(m.total_cost for m in materials),
+                exception_text=room.exception_text,
+                exception_applied=room.exception_applied,
             )
         )
 

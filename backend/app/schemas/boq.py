@@ -32,6 +32,12 @@ class BOQRoomOut(BaseModel):
     confirmed: bool
     materials: list[MaterialLine]
     room_total_cost: float
+    # The user's original per-room special requirement, echoed back so the BOQ
+    # is self-explanatory about why a room's materials look different.
+    exception_text: str | None = None
+    # What the exception agent actually did with it — e.g. "Excluded: cement_plaster."
+    # None when there was no exception_text to act on.
+    exception_applied: str | None = None
 
 
 class BOQConstraints(BaseModel):

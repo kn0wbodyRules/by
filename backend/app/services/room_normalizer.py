@@ -23,6 +23,7 @@ class RoomCreate(BaseModel):
     door_count: int
     window_count: int
     source: RoomSource
+    exception_text: str | None = None
 
 
 class RoomRejection(BaseModel):
@@ -49,6 +50,7 @@ def _build_room_create(
     door_count: int,
     window_count: int,
     source: RoomSource,
+    exception_text: str | None = None,
 ) -> RoomCreate:
     area_sqft = length_ft * width_ft
     aspect_ratio = compute_aspect_ratio(length_ft, width_ft)
@@ -72,6 +74,7 @@ def _build_room_create(
         door_count=door_count,
         window_count=window_count,
         source=source,
+        exception_text=exception_text,
     )
 
 
@@ -86,6 +89,7 @@ def normalize_manual_room(payload: ManualRoomInput) -> RoomCreate:
         door_count=payload.door_count,
         window_count=payload.window_count,
         source=RoomSource.MANUAL,
+        exception_text=payload.exception_text,
     )
 
 
@@ -147,6 +151,7 @@ def room_create_to_model(room_create: RoomCreate, job_id: str) -> Room:
         window_count=room_create.window_count,
         source=room_create.source,
         confirmed=False,
+        exception_text=room_create.exception_text,
     )
 
 
@@ -176,4 +181,6 @@ def room_to_out(room: Room) -> RoomOut:
         window_count=room.window_count,
         source=room.source,
         confirmed=room.confirmed,
+        exception_text=room.exception_text,
+        exception_applied=room.exception_applied,
     )

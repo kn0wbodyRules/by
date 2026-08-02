@@ -19,6 +19,9 @@ class ManualRoomInput(BaseModel):
     floor_type: str = ""
     door_count: int = Field(0, ge=0)
     window_count: int = Field(0, ge=0)
+    # Room-specific special requirement, e.g. "skip plaster here" — applied by the
+    # exception agent during /calculate, not read anywhere else.
+    exception_text: str | None = None
 
 
 class ManualRoomsRequest(BaseModel):
@@ -37,6 +40,8 @@ class RoomOut(BaseModel):
     window_count: int
     source: RoomSource
     confirmed: bool
+    exception_text: str | None = None
+    exception_applied: str | None = None
 
 
 class DetectRoomsResponse(BaseModel):
@@ -60,6 +65,7 @@ class RoomEdit(BaseModel):
     floor_type: str | None = None
     door_count: int | None = Field(default=None, ge=0)
     window_count: int | None = Field(default=None, ge=0)
+    exception_text: str | None = None
 
 
 class ConfirmRoomsRequest(BaseModel):

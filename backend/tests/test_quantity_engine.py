@@ -8,11 +8,13 @@ from app.services.quantity_engine import (
     calc_paint_plaster_quantity,
     calc_wall_perimeter_ft,
     compute_room_theoretical_quantities,
+    materials_for_room_type,
 )
 
 
 @dataclass
 class _FakeRoom:
+    room_type: str
     length_ft: float
     width_ft: float
     ceiling_height_ft: float
@@ -99,8 +101,9 @@ def test_brickwork_concrete_explicit_wall_length_overrides_perimeter():
     assert result == pytest.approx(337.5)
 
 
-def test_compute_room_theoretical_quantities_returns_all_five_materials():
+def test_compute_room_theoretical_quantities_bedroom_gets_all_five_materials():
     room = _FakeRoom(
+        room_type="bedroom",
         length_ft=10,
         width_ft=12,
         ceiling_height_ft=9,
@@ -125,3 +128,62 @@ def test_compute_room_theoretical_quantities_returns_all_five_materials():
     assert by_name["flooring_vitrified_tile"].quantity == pytest.approx(120.0)
     assert by_name["flooring_vitrified_tile"].unit == "sqft"
     assert by_name["brickwork"].unit == "cft"
+
+
+def test_materials_for_room_type_bathroom_skips_paint():
+    materials = materials_for_room_type("bathroom")
+    assert "wall_paint_emulsion" not in materials
+    assert "cement_plaster" in materials  # base layer stays, only paint is skipped
+    assert "flooring_vitrified_tile" in materials
+
+
+def test_materials_for_room_type_balcony_skips_paint_and_plaster():
+    materials = materials_for_room_type("balcony")
+    assert "wall_paint_emulsion" not in materials
+    assert "cement_plaster" not in materials
+    assert set(materials) == {"flooring_vitrified_tile", "brickwork", "concrete_rcc"}
+
+
+def test_materials_for_room_type_unrecognised_falls_back_to_full_set():
+    """A room_type not present in the config (or a future enum value the config
+    hasn't been updated for) must not silently under-compute."""
+    assert set(materials_for_room_type("nonexistent_type")) == {
+        "flooring_vitrified_tile",
+        "wall_paint_emulsion",
+        "cement_plaster",
+        "brickwork",
+        "concrete_rcc",
+    }
+
+
+def test_compute_room_theoretical_quantities_bathroom_excludes_paint():
+    room = _FakeRoom(
+        room_type="bathroom",
+        length_ft=6,
+        width_ft=5,
+        ceiling_height_ft=9,
+        wall_thickness_ft=0.5,
+        area_sqft=30,
+        door_count=1,
+        window_count=0,
+    )
+    results = compute_room_theoretical_quantities(room)
+    material_names = {r.material_name for r in results}
+    assert "wall_paint_emulsion" not in material_names
+    assert material_names == {"flooring_vitrified_tile", "cement_plaster", "brickwork", "concrete_rcc"}
+
+
+def test_compute_room_theoretical_quantities_balcony_only_flooring_and_structural():
+    room = _FakeRoom(
+        room_type="balcony",
+        length_ft=8,
+        width_ft=4,
+        ceiling_height_ft=9,
+        wall_thickness_ft=0.5,
+        area_sqft=32,
+        door_count=1,
+        window_count=0,
+    )
+    results = compute_room_theoretical_quantities(room)
+    material_names = {r.material_name for r in results}
+    assert material_names == {"flooring_vitrified_tile", "brickwork", "concrete_rcc"}

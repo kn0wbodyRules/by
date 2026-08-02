@@ -62,6 +62,10 @@ export interface RoomOut {
   window_count: number
   source: RoomSource
   confirmed: boolean
+  /** Free-text special requirement for this room only, e.g. "no plaster here". */
+  exception_text: string | null
+  /** What the exception agent did with it — only set once /calculate has run. */
+  exception_applied?: string | null
   /** Only populated once /calculate has run. */
   materials?: MaterialLine[]
   room_total_cost?: number
@@ -141,6 +145,8 @@ export interface ManualRoomInput {
   floor_type: string
   door_count: number
   window_count: number
+  /** Special requirement for this room only, e.g. "no plaster here". */
+  exception_text?: string | null
 }
 
 /** Payload for PATCH /confirm-rooms/{job_id} — only changed fields need sending. */
@@ -155,4 +161,5 @@ export interface RoomEdit {
   floor_type?: string
   door_count?: number
   window_count?: number
+  exception_text?: string | null
 }

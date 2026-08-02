@@ -120,6 +120,10 @@ def test_boq_response_room_keys_match_v3_contract(db):
         "confirmed",
         "materials",
         "room_total_cost",
+        # Deliberate v3 extension: per-room special requirements + what the
+        # exception agent did with them, both None when a room has neither.
+        "exception_text",
+        "exception_applied",
     }
     assert set(room_out["dimensions"].keys()) == {
         "length_ft",
